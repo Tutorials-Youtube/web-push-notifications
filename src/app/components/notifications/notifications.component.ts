@@ -13,18 +13,7 @@ export class NotificationsComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    if (this.swPush.isEnabled && Notification.permission == 'granted') {
-
-      this.swPush.notificationClicks.subscribe((data) => {
-
-        console.log(data);
-      })
-
-      this.swPush.messages.subscribe((message: any) => {
-        console.log(message);
-        // console.log(message.notification.data.message);
-      })
-    }
+    this.onEventNotifications();
   }
 
   enableNotify() {
@@ -60,7 +49,23 @@ export class NotificationsComponent implements OnInit {
   private async requestSubscription() {
     const payload = await this.swPush.requestSubscription({ serverPublicKey: environment.publicKey });
     console.log(payload.toJSON());
+    this.onEventNotifications();
     //? Hacer petición para guardar token en el backend
+  }
+
+  private onEventNotifications() {
+    if (this.swPush.isEnabled && Notification.permission == 'granted') {
+
+      this.swPush.notificationClicks.subscribe((data) => {
+
+        console.log(data);
+      })
+
+      this.swPush.messages.subscribe((message: any) => {
+        console.log(message);
+        // console.log(message.notification.data.message);
+      });
+    }
   }
 
 }
