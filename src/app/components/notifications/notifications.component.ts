@@ -8,12 +8,17 @@ import { environment } from '../../../environments/environment.development';
   styleUrl: './notifications.component.scss'
 })
 export class NotificationsComponent implements OnInit {
+  private pushSubscription!: PushSubscription | null;
 
   constructor(private swPush: SwPush) {
   }
 
+
   ngOnInit(): void {
-    this.onEventNotifications();
+    this.swPush.subscription.subscribe((subscription) => {
+      this.pushSubscription = subscription;
+      this.onEventNotifications();
+    });
   }
 
   enableNotify() {
@@ -21,9 +26,10 @@ export class NotificationsComponent implements OnInit {
       try {
         if (Notification.permission != 'granted') {
           this.requestSubscription();
+          this.onEventNotifications();
         } else {
           const isConfirm = confirm("Ya tiene los permisos para notificar. ¿Deseas refrescar el token?");
-          if (isConfirm) this.requestSubscription();
+          if (isConfirm) this.requestSubscription(), this.onEventNotifications();
         }
       } catch (error: any) {
         alert('No se estableció los permisos para notificar');
@@ -35,21 +41,22 @@ export class NotificationsComponent implements OnInit {
   }
 
   unsubscribe() {
-    if (this.swPush.isEnabled && Notification.permission == 'granted')
-      this.swPush.unsubscribe();
+    if (this.swPush.isEnabled && Notification.permission == 'granted') {
+      if (this.pushSubscription) {
+        this.pushSubscription.unsubscribe();
+        this.pushSubscription = null;
+      }
+    }
   }
 
   getToken() {
     if (this.swPush.isEnabled && Notification.permission == 'granted')
-      this.swPush.subscription.subscribe((subscription) => {
-        console.log(subscription);
-      });
+      this.requestSubscription();
   }
 
   private async requestSubscription() {
-    const payload = await this.swPush.requestSubscription({ serverPublicKey: environment.publicKey });
-    console.log(payload.toJSON());
-    this.onEventNotifications();
+    this.pushSubscription = await this.swPush.requestSubscription({ serverPublicKey: environment.publicKey });
+    console.log(this.pushSubscription.toJSON());
     //? Hacer petición para guardar token en el backend
   }
 
@@ -58,12 +65,13 @@ export class NotificationsComponent implements OnInit {
 
       this.swPush.notificationClicks.subscribe((data) => {
 
-        console.log(data);
+        console.log("click", data);
       })
 
-      this.swPush.messages.subscribe((message: any) => {
-        console.log(message);
-        // console.log(message.notification.data.message);
+      this.swPush.messages.subscribe({
+        next(value) {
+          console.log("Mensaje recibido", value);
+        },
       });
     }
   }
